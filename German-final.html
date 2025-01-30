@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reaction Time Task</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+</head>
+<body></body>
+<script>
+    var jsPsych = initJsPsych({
+        on_finish: function() {
+            console.log("Experiment finished.");
+        }
+    });
+
+    var timeline = [];
+
+    // Welcome message
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: "<h1>Herzlich willkommen!</h1><p>Drücken Sie eine beliebige Taste, um zu beginnen.</p>"
+    });
+
+    // Instructions
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: "<h2>Anweisungen</h2><p>Bei dieser Aufgabe werden Sie sehen, wie Pseudowörter nacheinander auf dem Bildschirm erscheinen.<p>Wenn Sie das Gefühl haben, dass Sie die Bedeutung des Wortes gefunden haben, drücken Sie die <strong>Leertaste</strong>.</p><p>Drücken Sie eine beliebige Taste, um die Aufgabe zu beginnen.</p>",
+        post_trial_gap: 2000
+    });
+
+    // Word stimuli list
+    var words = [
+        { stimulus: "Hypolepstand" },
+        { stimulus: "Bâtimenge" },
+        { stimulus: "Propositiefe" },
+        { stimulus: "Stundevelopment" },
+        { stimulus: "Jourumsatz" },
+        { stimulus: "Eikonsbegriff" },
+        { stimulus: "Redetempus" },
+        { stimulus: "Betriebheit" },
+        { stimulus: "Gegenteiltum" },
+        { stimulus: "Annahmschaft" },
+        { stimulus: "Widerstandung" },
+        { stimulus: "Spraubendex" },
+        { stimulus: "Mürbelkruss" },
+        { stimulus: "Blötschnotz" },
+        { stimulus: "Bunnelzwock" },
+        { stimulus: "Klempf" },
+        { stimulus: "Trosch" },
+        { stimulus: "Fletz" },
+        { stimulus: "Knürp" },
+        { stimulus: "Historystelle" }
+    ];
+
+    function sendDataToGoogleForms(word, reaction_time) {
+        var formID = "1FAIpQLSecv9kBqcl_sFtpj1tB1JFxdCzbf-Q1EI3jOb2w2T6XFvqWsg"; // Your form ID
+        var entryWord = "entry.391957400"; // Replace with the correct entry ID for the word
+        var entryRT = "entry.1962557296"; // Replace with the correct entry ID for reaction time
+
+        var formData = new URLSearchParams();
+        formData.append(entryWord, word);
+        formData.append(entryRT, reaction_time);
+
+        fetch(`https://docs.google.com/forms/d/1R4kc_tInXZlb3SvC8oRHDlJGuk-wABMuA-PPFhioeq8/formResponse`, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        })
+        .then(response => console.log(`✅ Submitted: ${word} - ${reaction_time}ms`))
+        .catch(error => console.error("❌ Error submitting data:", error));
+    }
+
+    // Reaction time trial
+    var reaction_time_trial = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+            return `<h2>${jsPsych.timelineVariable('stimulus')}</h2>`;
+        },
+        choices: [' '], // Space bar
+        data: {
+            task: 'reaction_time',
+            word: jsPsych.timelineVariable('stimulus')
+        },
+        on_finish: function(data) {
+            var reaction_time = data.rt;
+            var word = data.word;
+
+            console.log(`📊 Reaction Time for "${word}": ${reaction_time}ms`);
+
+            // Send data to Google Forms
+            sendDataToGoogleForms(word, reaction_time);
+        },
+        post_trial_gap: 1000 // 1s gap between trials
+    };
+
+    // Randomize order of words and add trials
+    timeline.push({
+        timeline: [reaction_time_trial],
+        timeline_variables: words,
+        randomize_order: true
+    });
+
+    // Debriefing
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function() {
+            var trials = jsPsych.data.get().filter({ task: 'reaction_time' });
+            var rt_mean = Math.round(trials.select('rt').mean());
+            return `<h2>Vielen Dank für Ihre Teilnahme!</h2></p><p>Die Daten wurden gespeichert. Drücken Sie zum Beenden eine beliebige Taste.</p>`;
+        }
+    });
+
+    // Start experiment
+    jsPsych.run(timeline);
+</script>
+</html>
