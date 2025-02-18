@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reaction Time Task</title>
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        .jspsych-btn {
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: background-color 0.3s;
+            white-space: normal;
+            max-width: 90vw;
+            word-wrap: break-word;
+            line-height: 1.3;
+        }
+        .jspsych-btn:hover {
+            background-color: #45a049;
+        }
+        .jspsych-display-element {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .word-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+        .instruction-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        @media (max-width: 768px) {
+            .jspsych-content {
+                max-width: 95vw;
+            }
+            .jspsych-btn {
+                font-size: 1rem;
+                padding: 0.7rem 1rem;
+                margin: 0.3rem;
+            }
+            .word-display {
+                font-size: 1.8rem;
+                margin-bottom: 1.5rem;
+            }
+            .instruction-text {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const jsPsych = initJsPsych({
+            on_finish: function() {
+                document.body.innerHTML = ''; // Clears everything from the page
+            }
+        });
+
+        const welcome = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `<h1>Herzlich willkommen!</h1>
+                <p class="instruction-text">Vielen Dank, dass Sie an diesem Experiment teilgenommen haben.<br>
+                Wir wünschen Ihnen viel Spaß damit!</p>`,
+            choices: ['Anfangen'],
+            button_html: '<button class="jspsych-btn">%choice%</button>'
+        };
+
+        const instructions = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `<h2>Anweisungen</h2>
+                <div class="instruction-text">
+                    <p>Bei dieser Aufgabe werden Sie sehen, wie Pseudowörter nacheinander auf dem Bildschirm erscheinen.</p>
+                    <p>Ihre Aufgabe ist es, für jedes Wort eine Bedeutung zu finden.</p>
+                    <p>Wenn Sie das Gefühl haben, dass Sie die Bedeutung des Wortes gefunden haben, drücken Sie die Taste auf dem Bildschirm.</p>
+
+                </div>`,
+            choices: ['Anfangen'],
+            button_html: '<button class="jspsych-btn">%choice%</button>'
+        };
+
+        const words = [
+         "Hypolepstand",
+    "Bâtimenge",
+       "Propositiefe",
+       "Stundevelopment",
+       "Jourumsatz",
+       "Eikonsbegriff",
+       "Redetempus",
+       "Betriebheit",
+       "Gegenteiltum",
+       "Annahmschaft",
+      "Widerstandung",
+       "Spraubendex",
+       "Mürbelkruss",
+       "Blötschnotz",
+       "Bunnelzwock",
+      "Klempf",
+      "Trosch",
+      "Fletz",
+       "Knürp",
+      "Historystelle"
+        ];
+
+        function sendDataToGoogleForms(word, reaction_time) {
+            const formData = new URLSearchParams();
+            formData.append("entry.391957400", word);
+            formData.append("entry.1962557296", reaction_time);
+
+            fetch(`https://docs.google.com/forms/d/1R4kc_tInXZlb3SvC8oRHDlJGuk-wABMuA-PPFhioeq8/formResponse`, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+            })
+            .then(response => console.log(`✅ Submitted: ${word} - ${reaction_time}ms`))
+            .catch(error => console.error("❌ Error submitting data:", error));
+        }
+
+        const trials = words.map(word => ({
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `<div class="word-display">${word}</div>`,
+            choices: ['Verstanden'],
+            button_html: '<button class="jspsych-btn">%choice%</button>',
+            data: { task: 'reaction_time', word: word },
+            on_finish: function(data) {
+                sendDataToGoogleForms(data.word, data.rt);
+            },
+            post_trial_gap: 1000
+        }));
+
+        const debrief = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: function() {
+                const trials = jsPsych.data.get().filter({task: 'reaction_time'});
+                const mean_rt = Math.round(trials.select('rt').mean());
+                return `<h2>Vielen Dank für Ihre Teilnahme!</h2>
+                    <div class="instruction-text">
+                        
+                        <p>Die Daten wurden gespeichert.</p>
+                    </div>`;
+            },
+            choices: ['Ende'],
+            button_html: '<button class="jspsych-btn">%choice%</button>'
+        };
+
+        const timeline = [
+            welcome,
+            instructions,
+            ...jsPsych.randomization.shuffle(trials),
+            debrief
+        ];
+
+        jsPsych.run(timeline);
+    </script>
+</body>
+</html>
